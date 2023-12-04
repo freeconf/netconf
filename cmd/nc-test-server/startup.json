@@ -1,0 +1,11 @@
+{
+    "car" : {},
+    "fc-netconf" : {
+        "ssh" : {
+            "options" : {
+                "port": ":9999",
+                "hostKeyFile" : "host.key"    
+            }
+        }
+    }
+}

@@ -1,0 +1,27 @@
+module fc-netconf {
+	namespace "org.freeconf/restconf";
+	prefix "nc";
+    yang-version "1.1";
+
+    container ssh {
+
+        container options {
+            leaf port {
+                type string;
+                default ":830";
+            }
+
+            leaf hostKeyFile {
+                type string;
+            }
+
+        }
+
+        container status {
+            config false;
+            leaf running {
+                type boolean;
+            }            
+        }
+    }
+}
