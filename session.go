@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/freeconf/restconf/device"
+	"github.com/freeconf/yang/fc"
 	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/nodeutil"
 )
@@ -46,10 +47,9 @@ func (ses *Session) readMessages() error {
 		err := ses.readRequest()
 		if err != nil {
 			if err == io.EOF {
-				fmt.Printf("ending stream")
+				fc.Debug.Printf("ending session %d", ses.Id)
 				return nil
 			}
-			fmt.Printf("err reading xml message. err=%s\n", err)
 			return err
 		}
 	}
@@ -57,8 +57,7 @@ func (ses *Session) readMessages() error {
 
 func (ses *Session) readRequest() error {
 	req, err := DecodeRequest(<-ses.in)
-	fmt.Printf("got request %v\n", req)
-	if err != nil {
+	if err != nil || req == nil {
 		return err
 	}
 	if req.Rpc != nil {
