@@ -25,6 +25,7 @@ func TestDecodeGetConfig(t *testing.T) {
 	fc.RequireEqual(t, nil, err)
 	fc.RequireEqual(t, true, msg.Rpc != nil)
 	fc.RequireEqual(t, true, msg.Rpc.GetConfig != nil)
+	fc.AssertEqual(t, "101", msg.Rpc.MessageId)
 	fc.AssertEqual(t, true, msg.Rpc.GetConfig.Filter != nil)
 	fc.AssertEqual(t, "subtree", msg.Rpc.GetConfig.Filter.Type)
 	fc.AssertEqual(t, 1, len(msg.Rpc.GetConfig.Filter.Elems))

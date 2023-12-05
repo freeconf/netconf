@@ -26,7 +26,7 @@ func DecodeRequest(in io.Reader) (*Request, error) {
 type Msg struct {
 	XMLName xml.Name
 	Attrs   []xml.Attr `xml:"-"`
-	Content []byte     `xml:",innerxml"`
+	Content string     `xml:",innerxml"`
 	Elems   []*Msg     `xml:",any"`
 }
 
@@ -44,22 +44,25 @@ func (m *Request) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 type RpcReply struct {
-	XMLName xml.Name            `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
-	OK      *Msg                `xml:"ok"`
-	Config  []*nodeutil.XMLWtr2 `xml:"data>config"`
+	XMLName   xml.Name            `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
+	MessageId string              `xml:"message-id,attr"`
+	OK        *Msg                `xml:"ok,omitempty"`
+	Config    []*nodeutil.XMLWtr2 `xml:"data,omitempty"`
 }
 
 type HelloMsg struct {
 	XMLName      xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 hello"`
 	Capabilities []*Msg   `xml:"capabilities>capability"`
-	SessionId    string   `xml:"session-id"`
+	SessionId    string   `xml:"session-id,omitempty"`
 }
 
 type RpcMsg struct {
 	XMLName   xml.Name   `xml:"rpc"`
+	MessageId string     `xml:"message-id,attr"`
 	Attrs     []xml.Attr `xml:"-"`
-	GetConfig *RpcGet    `xml:"get-config"`
-	Get       *RpcGet    `xml:"get"`
+	GetConfig *RpcGet    `xml:"get-config,omitempty"`
+	Get       *RpcGet    `xml:"get,omitempty"`
+	Close     *Msg       `xml:"close-session,omitempty"`
 }
 
 type RpcSource struct {
@@ -68,7 +71,7 @@ type RpcSource struct {
 }
 
 type RpcGet struct {
-	Filter *RpcFilter `xml:"filter"`
+	Filter *RpcFilter `xml:"filter,omitempty"`
 }
 
 type RpcFilter struct {

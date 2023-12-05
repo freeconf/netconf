@@ -24,15 +24,15 @@ func TestXmlWriter(t *testing.T) {
 		{
 			msg: &HelloMsg{
 				Capabilities: []*Msg{
-					{Content: []byte("xyz")},
+					{Content: "xyz"},
 				},
 				SessionId: "99",
 			},
 			expected: `<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><capabilities><capability>xyz</capability></capabilities><session-id>99</session-id></hello>`,
 		},
 		{
-			msg:      &RpcReply{OK: &Msg{}},
-			expected: `<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok></ok></rpc-reply>`,
+			msg:      &RpcReply{OK: &Msg{}, MessageId: "abc"},
+			expected: `<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="abc"><ok></ok></rpc-reply>`,
 		},
 	}
 	for _, test := range tests {
