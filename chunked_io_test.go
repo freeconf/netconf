@@ -9,7 +9,7 @@ import (
 	"github.com/freeconf/yang/fc"
 )
 
-func TestMsgsRdr(t *testing.T) {
+func TestChunkedRdr(t *testing.T) {
 	msg := `
 #4
 1234
@@ -21,7 +21,7 @@ func TestMsgsRdr(t *testing.T) {
 1
 ##
 `
-	rdrs := NewMsgsRdr(strings.NewReader(msg))
+	rdrs := NewChunkedRdr(strings.NewReader(msg))
 	msg1, err := io.ReadAll(<-rdrs)
 	fc.AssertEqual(t, nil, err)
 	fc.AssertEqual(t, `12341234567890`, string(msg1))
@@ -38,15 +38,15 @@ func TestMsgsRdr(t *testing.T) {
 	fc.AssertEqual(t, nil, <-rdrs)
 }
 
-func TestMsgsWtr(t *testing.T) {
+func TestChunkedWtr(t *testing.T) {
 	var buf bytes.Buffer
-	msg := NewMsgsWtr(&buf)
+	msg := NewChunkedWtr(&buf)
 	n, err := msg.Write([]byte("1234567890"))
 	fc.AssertEqual(t, nil, err)
 	fc.AssertEqual(t, 10, n)
 	fc.AssertEqual(t, nil, msg.Close())
 
-	msg = NewMsgsWtr(&buf)
+	msg = NewChunkedWtr(&buf)
 	n, err = msg.Write([]byte("1234"))
 	fc.AssertEqual(t, nil, err)
 	fc.AssertEqual(t, 4, n)

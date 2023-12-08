@@ -27,7 +27,7 @@ func NewSession(mgr SessionManager, dev device.Device, in io.Reader, out io.Writ
 		dev:   dev,
 		Id:    mgr.NextSessionId(),
 		inRaw: in,
-		in:    NewMsgsRdr(in),
+		in:    NewChunkedRdr(in),
 		out:   out,
 	}
 }
@@ -130,9 +130,9 @@ func (ses *Session) handleRpc(rpc *RpcMsg) error {
 		fmt.Printf("got err %s\n", err)
 		return err
 	}
-	out := NewMsgsWtr(ses.out)
+	out := NewChunkedWtr(ses.out)
 	defer out.Close()
-	return WriteResponse(resp, out, false)
+	return WriteResponse(resp, out)
 }
 
 func (ses *Session) handleHello(h *HelloMsg) error {

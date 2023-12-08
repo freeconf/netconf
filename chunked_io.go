@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-// NewMsgsRdr reads "chunked" xml messages according to RFC6242 so that individual xml
+// NewChunkedRdr reads "chunked" xml messages according to RFC6242 so that individual xml
 // messages can be sent over a ssh stream.
 //
 //	see https://datatracker.ietf.org/doc/html/rfc6242#section-4.1
@@ -21,7 +21,7 @@ import (
 //	  ##
 //
 //	This has 2 chunks of sizes 4 and 12 bytes.
-func NewMsgsRdr(in io.Reader) <-chan io.Reader {
+func NewChunkedRdr(in io.Reader) <-chan io.Reader {
 	buf := make([]byte, 4096)
 	rdrs := make(chan io.Reader)
 	chunked := bufio.NewReader(in)
@@ -126,7 +126,7 @@ func (cw chunkedWtr) Write(p []byte) (int, error) {
 	return wrote, err
 }
 
-// NewMsgsWtr is the counterpart to NewMsgsRdr
-func NewMsgsWtr(w io.Writer) io.WriteCloser {
+// NewChunkedWtr is the counterpart to NewMsgsRdr
+func NewChunkedWtr(w io.Writer) io.WriteCloser {
 	return chunkedWtr{raw: w}
 }

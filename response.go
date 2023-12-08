@@ -9,8 +9,11 @@ const (
 	msgDelim = "]]>]]>"
 )
 
-func WriteResponse(response any, out io.Writer, includeMessageDelim bool) error {
+func WriteResponseWithOptions(response any, out io.Writer, includeMessageDelim bool, pretty bool) error {
 	e := xml.NewEncoder(out)
+	if pretty {
+		e.Indent("", "  ")
+	}
 	if err := e.Encode(response); err != nil {
 		return err
 	}
@@ -21,4 +24,8 @@ func WriteResponse(response any, out io.Writer, includeMessageDelim bool) error 
 		}
 	}
 	return nil
+}
+
+func WriteResponse(response any, out io.Writer) error {
+	return WriteResponseWithOptions(response, out, false, false)
 }

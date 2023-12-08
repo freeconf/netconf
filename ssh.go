@@ -109,7 +109,7 @@ func (s *SshHandler) handleConn(conn *ssh.ServerConn, c ssh.NewChannel) {
 						// sending hello shouldn't wait to recieve message from client
 						// https://datatracker.ietf.org/doc/html/rfc6242#section-3.1
 						go func() {
-							if serr := WriteResponse(sess.Hello(), ch, true); serr != nil {
+							if serr := WriteResponseWithOptions(sess.Hello(), ch, true, false); serr != nil {
 								s.host.HandleErr(serr)
 							}
 						}()
