@@ -1,6 +1,7 @@
 package netconf
 
 import (
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/freeconf/restconf/device"
 	"github.com/freeconf/yang/fc"
+	"github.com/freeconf/yang/meta"
 	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/nodeutil"
 )
@@ -76,7 +78,12 @@ func (ses *Session) readFilter(f *RpcFilter, c node.ContentConstraint) ([]*node.
 		if err != nil {
 			return nil, err
 		}
-		sels = append(sels, b.Root())
+		sel := b.Root()
+		sel.Constraints.AddConstraint("content", 0, 0, c)
+
+		// TODO apply filter
+
+		sels = append(sels, sel)
 	}
 	return sels, nil
 }
@@ -101,12 +108,19 @@ func (ses *Session) handleGetConfig(req *RpcMsg, get *RpcGet, resp *RpcReply, c 
 	if err != nil {
 		return err
 	}
+	resp.Data = &RpcData{}
 	for _, sel := range sels {
-		cfg := &nodeutil.XMLWtr2{}
+		mod := meta.OriginalModule(sel.Meta())
+		cfg := &nodeutil.XMLWtr2{
+			XMLName: xml.Name{
+				Local: sel.Meta().Ident(),
+				Space: mod.Namespace(),
+			},
+		}
 		if err := sel.UpsertInto(cfg); err != nil {
 			return err
 		}
-		resp.Config = append(resp.Config, cfg)
+		resp.Data.Nodes = append(resp.Data.Nodes, cfg)
 	}
 	return nil
 }

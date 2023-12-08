@@ -21,10 +21,14 @@ type MsgLeaf struct {
 }
 
 type RpcReply struct {
-	XMLName   xml.Name            `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
-	MessageId string              `xml:"message-id,attr"`
-	OK        *Msg                `xml:"ok,omitempty"`
-	Config    []*nodeutil.XMLWtr2 `xml:"data,omitempty"`
+	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
+	MessageId string   `xml:"message-id,attr"`
+	OK        *Msg     `xml:"ok,omitempty"`
+	Data      *RpcData `xml:"data,omitempty"`
+}
+
+type RpcData struct {
+	Nodes []*nodeutil.XMLWtr2
 }
 
 type HelloMsg struct {
