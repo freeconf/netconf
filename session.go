@@ -72,16 +72,36 @@ func (ses *Session) readRequest() error {
 }
 
 func (ses *Session) readFilter(f *RpcFilter, c node.ContentConstraint) ([]*node.Selection, error) {
-	var sels = make([]*node.Selection, 0, len(ses.dev.Modules()))
-	for name := range ses.dev.Modules() {
-		b, err := ses.dev.Browser(name)
+	if f == nil {
+		// Sec 6.4.1 - no filter returns all data
+		f = &RpcFilter{}
+		for name := range ses.dev.Modules() {
+			f.Elems = append(f.Elems, &Msg{XMLName: xml.Name{Local: name}})
+		}
+	} else if len(f.Elems) == 0 {
+		// Sec 6.4.1 - empty filter returns nothing
+		return nil, nil
+	}
+
+	var sels = make([]*node.Selection, 0)
+	for _, e := range f.Elems {
+		b, err := ses.dev.Browser(e.XMLName.Local)
 		if err != nil {
 			return nil, err
+		}
+		if e.XMLName.Space != "" {
+			if b.Meta.Namespace() != e.XMLName.Space {
+				continue
+			}
 		}
 		sel := b.Root()
 		sel.Constraints.AddConstraint("content", 0, 0, c)
 
-		// TODO apply filter
+		var f filter
+		if err := compileFilter(e, &f); err != nil {
+			return nil, err
+		}
+		sel.Constraints.AddConstraint("filter", 10, 0, &f)
 
 		sels = append(sels, sel)
 	}
@@ -103,7 +123,7 @@ func (ses *Session) Hello() *HelloMsg {
 	}
 }
 
-func (ses *Session) handleGetConfig(req *RpcMsg, get *RpcGet, resp *RpcReply, c node.ContentConstraint) error {
+func (ses *Session) handleGet(req *RpcMsg, get *RpcGet, resp *RpcReply, c node.ContentConstraint) error {
 	sels, err := ses.readFilter(get.Filter, c)
 	if err != nil {
 		return err
@@ -129,9 +149,9 @@ func (ses *Session) handleRpc(rpc *RpcMsg) error {
 	var err error
 	resp := &RpcReply{MessageId: rpc.MessageId}
 	if rpc.GetConfig != nil {
-		err = ses.handleGetConfig(rpc, rpc.GetConfig, resp, node.ContentConfig)
+		err = ses.handleGet(rpc, rpc.GetConfig, resp, node.ContentConfig)
 	} else if rpc.Get != nil {
-		err = ses.handleGetConfig(rpc, rpc.Get, resp, node.ContentOperational)
+		err = ses.handleGet(rpc, rpc.Get, resp, node.ContentOperational)
 	} else if rpc.Close != nil {
 		resp.OK = &Msg{}
 

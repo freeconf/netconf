@@ -1,0 +1,12 @@
+<top xmlns="http://example.com/schema/1.2/config">
+  <machines>
+    <id>00001</id>
+    <os>linux</os>
+    <purpose>webserver</purpose>
+  </machines>
+  <machines>
+    <id>00002</id>
+    <os>linux</os>
+    <purpose>dns</purpose>
+  </machines>
+</top>

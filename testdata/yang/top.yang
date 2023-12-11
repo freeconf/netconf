@@ -1,0 +1,42 @@
+module top {
+    namespace "http://example.com/schema/1.2/config";
+
+    container users {
+        list user {
+            key name;
+            leaf name {
+                type string;
+            }
+            leaf type {
+                type enumeration {
+                    enum superuser;
+                    enum admin;
+                    enum normal;
+                }
+            }
+            leaf full-name {
+                type string;
+            }
+            container company-info {
+                leaf id {
+                    type int32;
+                }
+                leaf dept {
+                    type int32;
+                }
+            }
+        }
+    }
+    list machines {
+        key id;
+        leaf id {
+            type string;
+        }
+        leaf os {
+            type string;            
+        }
+        leaf purpose {
+            type string;
+        }
+    }
+}

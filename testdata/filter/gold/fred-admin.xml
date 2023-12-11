@@ -1,0 +1,8 @@
+<top xmlns="http://example.com/schema/1.2/config">
+  <users>
+    <user>
+      <name>fred</name>
+      <type>admin</type>
+    </user>
+  </users>
+</top>

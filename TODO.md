@@ -21,6 +21,11 @@ module x {
       namespace y;
 }
 
+
+Rule:
+*  Nodes that contain child elements within a subtree filter are called  "containment nodes"
+*  
+
    filter
       no filter 
                     select all from all modules
@@ -28,41 +33,67 @@ module x {
       empty filter 
                     selects nothing
 
-      <x xmlns="y"> 
+      <selection xmlns="y"> 
                     selects all data from module w/ns = "y"
 
       <containment xmlns="y">
-         <selection />     
-                    selects all <selection> nodes from module w/ns = "y"
+         <selection1 />     
+         <selection2 />     
 
-      <containment xmlns="y">
-         <selection>
+     Find("containment")
+          select
+             fields=[selection1, selection2]
+
+
+      <containment1 xmlns="y">
+         <containment2>
+            <content-matching1 xxx="abc" />
+
+        Find("containment1/containment2")
+           select
+              fields=[content-matching1]
+           where 
+              content-matching1/xxx == abc
+
+      <containment1 xmlns="y">
+         <containment2>
             <content-matching1>xxx</content-matching1>
             <content-matching2>yyy</content-matching2>
+            <content-matching-empty />
 
                     selects only the <selection> nodes from module
                     with content-matching1 == xxx AND
                     content-matching2 == yyy 
 
-      <containment xmlns="y">
-         <selection1>
-            <content-matching1>xxx</content-matching1>
-            <content-matching2>yyy</content-matching2>
-            <selection2>
-
-                    selects only the <selection1> nodes from module
-                    with content-matching1 == xxx AND
-                    content-matching2 == yyy    
-                    and ONLY elements:        
-                       content-matching1
-                       content-matching2
-                       selection2          
+      Find("containment1/containment2")
+           select
+              fields=[
+                  content-matching1
+                  content-matching2
+                  content-matching-empty
+                  (key(s) optional)
+               ]
+           where 
+              content-matching1=xxx
+              content-matching2=yyy     
 
       <containment>
          <containment>
            <selection1 />
            <selection2 />           
 
+
+      Find("containment1/containment2")
+           select
+              fields=[
+                  content-matching1
+                  content-matching2
+                  content-matching-empty
+                  (key(s) optional)
+               ]
+           where 
+              content-matching1=xxx
+              content-matching2=yyy    
                     selects all <selection1> and <selection2> nodes from module
 
 

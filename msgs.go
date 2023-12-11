@@ -10,13 +10,13 @@ import (
 
 type Msg struct {
 	XMLName xml.Name
-	Attrs   []xml.Attr `xml:"-"`
+	Attrs   []xml.Attr `xml:",any,attr"`
 	Content string     `xml:",chardata"`
 	Elems   []*Msg     `xml:",any"`
 }
 
 type MsgLeaf struct {
-	Attrs   []xml.Attr `xml:"-"`
+	Attrs   []xml.Attr `xml:",any,attr"`
 	Content string     `xml:",innerxml"`
 }
 
@@ -40,7 +40,7 @@ type HelloMsg struct {
 type RpcMsg struct {
 	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
 	MessageId string     `xml:"message-id,attr"`
-	Attrs     []xml.Attr `xml:"-"`
+	Attrs     []xml.Attr `xml:",any,attr"`
 	GetConfig *RpcGet    `xml:"get-config,omitempty"`
 	Get       *RpcGet    `xml:"get,omitempty"`
 	Edit      *RpcEdit   `xml:"edit-config,omitempty"`

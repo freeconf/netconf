@@ -1,0 +1,31 @@
+<top xmlns="http://example.com/schema/1.2/config">
+  <users>
+    <user>
+      <name>root</name>
+      <type>superuser</type>
+      <full-name>Charlie Root</full-name>
+      <company-info>
+        <id>1</id>
+        <dept>1</dept>
+      </company-info>
+    </user>
+    <user>
+      <name>fred</name>
+      <type>admin</type>
+      <full-name>Fred Flintstone</full-name>
+      <company-info>
+        <id>2</id>
+        <dept>2</dept>
+      </company-info>
+    </user>
+    <user>
+      <name>barney</name>
+      <type>admin</type>
+      <full-name>Barney Rubble</full-name>
+      <company-info>
+        <id>3</id>
+        <dept>2</dept>
+      </company-info>
+    </user>
+  </users>
+</top>
