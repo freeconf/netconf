@@ -8,7 +8,7 @@ import (
 	"github.com/freeconf/yang/source"
 )
 
-// Start the cara app with NETCONF Server support to test NETCONF clients
+// Start the car app with NETCONF Server support to test NETCONF clients
 // against.  This is unliekly a very useful tool long term so this will eventually
 // turn into an example I suspect.
 //
@@ -19,7 +19,7 @@ func main() {
 	c := testdata.New()
 	api := testdata.Manage(c)
 	ypath := source.Any(
-		source.Path(".:../../yang"),
+		source.Path("../../testdata/yang:../../yang"),
 		restconf.InternalYPath,
 	)
 	d := device.New(ypath)

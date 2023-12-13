@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 
 	"github.com/freeconf/restconf/device"
@@ -123,7 +124,7 @@ func (ses *Session) Hello() *HelloMsg {
 	}
 }
 
-func (ses *Session) handleGet(req *RpcMsg, get *RpcGet, resp *RpcReply, c node.ContentConstraint) error {
+func (ses *Session) handleGet(get *RpcGet, resp *RpcReply, c node.ContentConstraint) error {
 	sels, err := ses.readFilter(get.Filter, c)
 	if err != nil {
 		return err
@@ -145,13 +146,66 @@ func (ses *Session) handleGet(req *RpcMsg, get *RpcGet, resp *RpcReply, c node.C
 	return nil
 }
 
+func (ses *Session) handleEdit(edit *RpcEdit, resp *RpcReply) error {
+	defaultOp := edit.DefaultOperation
+	if defaultOp == "" {
+		defaultOp = "merge"
+	}
+	if edit.Config == nil {
+		return fmt.Errorf("edit config with no config specified")
+	}
+	for _, n := range edit.Config.Nodes {
+		b, err := ses.dev.Browser(n.XMLName.Local)
+		if err != nil {
+			return err
+		}
+		edits, err := buildEdits(defaultOp, n, b.Meta)
+		if err != nil {
+			return err
+		}
+		root := b.Root()
+		for _, e := range edits {
+			sel, err := root.Find(e.path)
+			if err != nil {
+				return err
+			}
+			switch e.op {
+			case "merge":
+				err = sel.UpsertFrom(nodeutil.Dump(e.n, os.Stdout))
+			case "replace":
+				err = sel.ReplaceFrom(nodeutil.Dump(e.n, os.Stdout))
+			case "create":
+				err = sel.InsertFrom(nodeutil.Dump(e.n, os.Stdout))
+			case "remove":
+				if sel != nil {
+					err = sel.Delete()
+				}
+			case "delete":
+				if sel == nil {
+					err = fmt.Errorf("node with path '%s' does not exist.  try remove operation to ignore this error", e.path)
+				} else {
+					err = sel.Delete()
+				}
+			default:
+				return fmt.Errorf("edit config operation '%s' not implemented or recognized", e.op)
+			}
+			if err == nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (ses *Session) handleRpc(rpc *RpcMsg) error {
 	var err error
 	resp := &RpcReply{MessageId: rpc.MessageId}
 	if rpc.GetConfig != nil {
-		err = ses.handleGet(rpc, rpc.GetConfig, resp, node.ContentConfig)
+		err = ses.handleGet(rpc.GetConfig, resp, node.ContentConfig)
 	} else if rpc.Get != nil {
-		err = ses.handleGet(rpc, rpc.Get, resp, node.ContentOperational)
+		err = ses.handleGet(rpc.Get, resp, node.ContentOperational)
+	} else if rpc.EditConfig != nil {
+		err = ses.handleEdit(rpc.EditConfig, resp)
 	} else if rpc.Close != nil {
 		resp.OK = &Msg{}
 

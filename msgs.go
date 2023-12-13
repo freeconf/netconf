@@ -17,7 +17,7 @@ type Msg struct {
 
 type MsgLeaf struct {
 	Attrs   []xml.Attr `xml:",any,attr"`
-	Content string     `xml:",innerxml"`
+	Content string     `xml:",chardata"`
 }
 
 type RpcReply struct {
@@ -38,16 +38,16 @@ type HelloMsg struct {
 }
 
 type RpcMsg struct {
-	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
-	MessageId string     `xml:"message-id,attr"`
-	Attrs     []xml.Attr `xml:",any,attr"`
-	GetConfig *RpcGet    `xml:"get-config,omitempty"`
-	Get       *RpcGet    `xml:"get,omitempty"`
-	Edit      *RpcEdit   `xml:"edit-config,omitempty"`
-	Copy      *RpcCopy   `xml:"copy-config,omitempty"`
-	Delete    *RpcEdit   `xml:"delete-config,omitempty"`
-	Close     *Msg       `xml:"close-session,omitempty"`
-	Kill      *Msg       `xml:"kill-session,omitempty"`
+	XMLName    xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
+	MessageId  string     `xml:"message-id,attr"`
+	Attrs      []xml.Attr `xml:",any,attr"`
+	GetConfig  *RpcGet    `xml:"get-config,omitempty"`
+	Get        *RpcGet    `xml:"get,omitempty"`
+	EditConfig *RpcEdit   `xml:"edit-config,omitempty"`
+	Copy       *RpcCopy   `xml:"copy-config,omitempty"`
+	Delete     *RpcEdit   `xml:"delete-config,omitempty"`
+	Close      *Msg       `xml:"close-session,omitempty"`
+	Kill       *Msg       `xml:"kill-session,omitempty"`
 }
 
 type RpcCopy struct {
@@ -56,13 +56,10 @@ type RpcCopy struct {
 }
 
 type RpcEdit struct {
-	// allowed: merge(default), replace, create, delete, remove
-	Operation string `xml:"operation,attr"`
-
 	Target *Msg `xml:"target,omitempty"`
 
-	// allowed: merge(default), replace, none
-	DefaultOperation *Msg `xml:"default-operation,omitempty"`
+	// allowed: merge(default), replace, create, delete, remove
+	DefaultOperation string `xml:"default-operation,omitempty"`
 
 	// allowed: test-then-set(default), set, test-only
 	TestOperation *Msg `xml:"test-operation,omitempty"`
