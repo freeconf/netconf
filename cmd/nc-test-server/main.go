@@ -5,6 +5,7 @@ import (
 	"github.com/freeconf/restconf"
 	"github.com/freeconf/restconf/device"
 	"github.com/freeconf/restconf/testdata"
+	"github.com/freeconf/yang/fc"
 	"github.com/freeconf/yang/source"
 )
 
@@ -16,6 +17,7 @@ import (
 //   ssh-keygen -t rsa -f host.key
 
 func main() {
+	fc.DebugLog(true)
 	c := testdata.New()
 	api := testdata.Manage(c)
 	ypath := source.Any(

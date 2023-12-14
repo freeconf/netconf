@@ -1,6 +1,7 @@
 package netconf
 
 import (
+	"context"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -24,6 +25,8 @@ type Session struct {
 	Id    int64
 }
 
+var EOSErr = errors.New("end of session")
+
 func NewSession(mgr SessionManager, dev device.Device, in io.Reader, out io.Writer) *Session {
 	return &Session{
 		mgr:   mgr,
@@ -35,7 +38,7 @@ func NewSession(mgr SessionManager, dev device.Device, in io.Reader, out io.Writ
 	}
 }
 
-func (ses *Session) readMessages() error {
+func (ses *Session) readMessages(ctx context.Context) error {
 	hello, err := DecodeRequest(ses.inRaw)
 	if err != nil {
 		return err
@@ -43,33 +46,35 @@ func (ses *Session) readMessages() error {
 	if hello.Hello == nil {
 		return errors.New("expected initial hello message")
 	}
+	fc.Debug.Printf("got hello request ses=%d", ses.Id)
 	if err = ses.handleHello(hello.Hello); err != nil {
 		return err
 	}
 	for {
-		err := ses.readRequest()
+		err := ses.readRequest(ctx)
 		if err != nil {
-			if err == io.EOF {
-				fc.Debug.Printf("ending session %d", ses.Id)
-				return nil
-			}
 			return err
 		}
 	}
 }
 
-func (ses *Session) readRequest() error {
-	req, err := DecodeRequest(<-ses.in)
-	if err != nil || req == nil {
-		return err
+func (ses *Session) readRequest(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return EOSErr
+	case in := <-ses.in:
+		req, err := DecodeRequest(in)
+		if err != nil || req == nil {
+			return err
+		}
+		if req.Rpc != nil {
+			return ses.handleRpc(req.Rpc)
+		}
+		if req.Hello != nil {
+			return ses.handleHello(req.Hello)
+		}
+		return fmt.Errorf("unsupported message %s", req.Other.XMLName.Local)
 	}
-	if req.Rpc != nil {
-		return ses.handleRpc(req.Rpc)
-	}
-	if req.Hello != nil {
-		return ses.handleHello(req.Hello)
-	}
-	return fmt.Errorf("unsupported message %s", req.Other.XMLName.Local)
 }
 
 func (ses *Session) readFilter(f *RpcFilter, c node.ContentConstraint) ([]*node.Selection, error) {
@@ -198,29 +203,42 @@ func (ses *Session) handleEdit(edit *RpcEdit, resp *RpcReply) error {
 }
 
 func (ses *Session) handleRpc(rpc *RpcMsg) error {
+	close := false
 	var err error
 	resp := &RpcReply{MessageId: rpc.MessageId}
 	if rpc.GetConfig != nil {
+		fc.Debug.Printf("get config message ses=%d", ses.Id)
 		err = ses.handleGet(rpc.GetConfig, resp, node.ContentConfig)
 	} else if rpc.Get != nil {
+		fc.Debug.Printf("get metrics message ses=%d", ses.Id)
 		err = ses.handleGet(rpc.Get, resp, node.ContentOperational)
 	} else if rpc.EditConfig != nil {
+		fc.Debug.Printf("edit message ses=%d", ses.Id)
 		err = ses.handleEdit(rpc.EditConfig, resp)
-	} else if rpc.Close != nil {
+	} else if rpc.Kill != nil {
+		fc.Debug.Printf("kill message ses=%d", ses.Id)
+		// abort, unlock, rollback
 		resp.OK = &Msg{}
-
-		// TODO: properly close session
-		// err = io.EOF
+		close = true
+	} else if rpc.Close != nil {
+		fc.Debug.Printf("close message ses=%d", ses.Id)
+		resp.OK = &Msg{}
+		close = true
 	} else {
 		err = fmt.Errorf("unrecognized rpc command")
 	}
 	if err != nil {
-		fmt.Printf("got err %s\n", err)
 		return err
 	}
 	out := NewChunkedWtr(ses.out)
 	defer out.Close()
-	return WriteResponse(resp, out)
+	if err = WriteResponse(resp, out); err != nil {
+		return err
+	}
+	if close {
+		return EOSErr
+	}
+	return nil
 }
 
 func (ses *Session) handleHello(h *HelloMsg) error {

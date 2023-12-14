@@ -11,6 +11,19 @@ type Request struct {
 	Other *Msg
 }
 
+func (r Request) String() string {
+	if r.Hello != nil {
+		return "hello"
+	}
+	if r.Rpc != nil {
+		return "rpc"
+	}
+	if r.Other != nil {
+		return r.Other.XMLName.Local
+	}
+	return "unknown"
+}
+
 func DecodeRequest(in io.Reader) (*Request, error) {
 	dec := xml.NewDecoder(in)
 	var req Request

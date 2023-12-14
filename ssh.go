@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -86,49 +87,58 @@ func (s *SshHandler) handleNewChannels(conn *ssh.ServerConn, newChannelRequests 
 }
 
 func (s *SshHandler) handleConn(conn *ssh.ServerConn, c ssh.NewChannel) {
-	fmt.Println("got connection, waiting for message...")
+	fc.Debug.Println("ssh: got connection, waiting for message...")
 	if c.ChannelType() != "session" {
 		c.Reject(ssh.Prohibited, "channel type is not a session")
 		return
 	}
 	ch, reqs, err := c.Accept()
 	if err != nil {
-		log.Println("fail to accept channel request", err)
+		fc.Debug.Println("ssh: fail to accept channel request", err)
 		return
 	}
 	sess := NewSession(s.host, s.dev, ch, ch)
+	ctx := context.Background()
 	go func(in <-chan *ssh.Request) {
+		defer fc.Debug.Printf("ssh: exiting ses=%d", sess.Id)
 		defer ch.Close()
-		for req := range reqs {
-			fmt.Printf("req, type=%s, payload=%v\n", req.Type, req.Payload)
-			switch req.Type {
-			case "subsystem":
-				if len(req.Payload) >= 4 {
-					if bytes.Equal(req.Payload[4:], []byte("netconf")) {
-
-						// sending hello shouldn't wait to recieve message from client
-						// https://datatracker.ietf.org/doc/html/rfc6242#section-3.1
-						go func() {
-							if serr := WriteResponseWithOptions(sess.Hello(), ch, true, false); serr != nil {
-								s.host.HandleErr(serr)
-							}
-						}()
-
-						if req.WantReply {
-							req.Reply(true, []byte{})
-						}
-						if err := sess.readMessages(); err != nil {
-							s.host.HandleErr(err)
-							break
-						}
-						continue
-					}
-				}
-				fmt.Printf("unexpected message")
-				req.Reply(false, nil)
-			default:
-				c.Reject(ssh.Prohibited, "channel subtype is not supported")
+		for {
+			select {
+			case <-ctx.Done():
+				fc.Debug.Printf("context closed on ses=%d", sess.Id)
 				return
+			case req := <-reqs:
+				fc.Debug.Printf("got request ses=%d", sess.Id)
+				switch req.Type {
+				case "subsystem":
+					if len(req.Payload) >= 4 {
+						if bytes.Equal(req.Payload[4:], []byte("netconf")) {
+
+							// sending hello shouldn't wait to recieve message from client
+							// https://datatracker.ietf.org/doc/html/rfc6242#section-3.1
+							go func() {
+								if serr := WriteResponseWithOptions(sess.Hello(), ch, true, false); serr != nil {
+									s.host.HandleErr(serr)
+								}
+							}()
+
+							if req.WantReply {
+								req.Reply(true, []byte{})
+							}
+							if err := sess.readMessages(ctx); err != nil {
+								if err != EOSErr {
+									s.host.HandleErr(err)
+								}
+								return
+							}
+						}
+					}
+					fc.Err.Printf("unexpected message in session %d '%s'", sess.Id, string(req.Payload))
+					return
+				default:
+					c.Reject(ssh.Prohibited, "channel subtype is not supported")
+					return
+				}
 			}
 		}
 	}(reqs)
