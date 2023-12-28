@@ -2,7 +2,6 @@ package netconf
 
 import (
 	"context"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"github.com/freeconf/yang/meta"
 	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/nodeutil"
+	"github.com/freeconf/yang/patch/xml"
 )
 
 type Session struct {
@@ -25,7 +25,8 @@ type Session struct {
 	Id    int64
 }
 
-var EOSErr = errors.New("end of session")
+// ErrEOS signals the session should be closed gracefully.
+var ErrEOS = errors.New("end of session") // not really an error but linter wants "Err" prefix
 
 func NewSession(mgr SessionManager, dev device.Device, in io.Reader, out io.Writer) *Session {
 	return &Session{
@@ -61,7 +62,7 @@ func (ses *Session) readMessages(ctx context.Context) error {
 func (ses *Session) readRequest(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
-		return EOSErr
+		return ErrEOS
 	case in := <-ses.in:
 		req, err := DecodeRequest(in)
 		if err != nil || req == nil {
@@ -102,14 +103,21 @@ func (ses *Session) readFilter(f *RpcFilter, c node.ContentConstraint) ([]*node.
 		}
 		sel := b.Root()
 		sel.Constraints.AddConstraint("content", 0, 0, c)
+		if f.Type == "xpath" {
+			sel, err := f.CompileXPath(ses.dev)
+			if err != nil {
+				return nil, err
+			}
+			sels = append(sels, sel)
+		} else if f.Type == "subtree" || f.Type == "" {
+			var f subtreeFilter
+			if err := compileSubtree(e, &f); err != nil {
+				return nil, err
+			}
+			sel.Constraints.AddConstraint("filter", 10, 0, &f)
 
-		var f filter
-		if err := compileFilter(e, &f); err != nil {
-			return nil, err
+			sels = append(sels, sel)
 		}
-		sel.Constraints.AddConstraint("filter", 10, 0, &f)
-
-		sels = append(sels, sel)
 	}
 	return sels, nil
 }
@@ -236,7 +244,7 @@ func (ses *Session) handleRpc(rpc *RpcMsg) error {
 		return err
 	}
 	if close {
-		return EOSErr
+		return ErrEOS
 	}
 	return nil
 }

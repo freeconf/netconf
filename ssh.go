@@ -126,7 +126,7 @@ func (s *SshHandler) handleConn(conn *ssh.ServerConn, c ssh.NewChannel) {
 								req.Reply(true, []byte{})
 							}
 							if err := sess.readMessages(ctx); err != nil {
-								if err != EOSErr {
+								if err != ErrEOS {
 									s.host.HandleErr(err)
 								}
 								return

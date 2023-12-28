@@ -1,8 +1,9 @@
 package netconf
 
 import (
-	"encoding/xml"
 	"io"
+
+	"github.com/freeconf/yang/patch/xml"
 )
 
 const (

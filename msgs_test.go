@@ -2,12 +2,12 @@ package netconf
 
 import (
 	"bytes"
-	"encoding/xml"
 	"flag"
 	"strings"
 	"testing"
 
 	"github.com/freeconf/yang/fc"
+	"github.com/freeconf/yang/patch/xml"
 )
 
 var updateFlag = flag.Bool("update", false, "update golden files instead of verifying against them")
@@ -17,13 +17,13 @@ func TestMsg(t *testing.T) {
 		XMLName: xml.Name{Local: "x", Space: "Y"},
 		Elems: []*Msg{
 			{
-				XMLName: xml.Name{Local: "y", Space: "Y"},
+				XMLName: xml.Name{Local: "y"},
 			},
 		},
 	}
 	var buf bytes.Buffer
-	fc.AssertEqual(t, nil, WriteResponseWithOptions(msg, &buf, false, true))
-	fc.AssertEqual(t, `<x></x>`, buf.String())
+	fc.AssertEqual(t, nil, WriteResponseWithOptions(msg, &buf, false, false))
+	fc.AssertEqual(t, `<x xmlns="Y"><y></y></x>`, buf.String())
 
 }
 
@@ -31,9 +31,7 @@ func TestGetConfig(t *testing.T) {
 	payload := `
 	<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
 		<get-config>
-			<source>
-				<running/>
-			</source>
+			<source><running/></source>
 			<filter type="subtree">
 				<top xmlns="http://example.com/schema/1.2/config">
 					<users />
@@ -54,6 +52,7 @@ func TestGetConfig(t *testing.T) {
 
 	// only nec. when trying to write back what we read. RFC explicitly states
 	// the whitespace might matter.
+	CleanWhitespace(msg.Rpc.GetConfig.Source.Elems...)
 	CleanWhitespace(msg.Rpc.GetConfig.Filter.Elems...)
 
 	// write/encode
@@ -65,6 +64,7 @@ func TestGetConfig(t *testing.T) {
 func CleanWhitespace(elems ...*Msg) {
 	for _, x := range elems {
 		x.Content = strings.TrimSpace(x.Content)
+		x.XMLName.Space = ""
 		CleanWhitespace(x.Elems...)
 	}
 }
@@ -73,15 +73,9 @@ func TestHello(t *testing.T) {
 	payload := `
 	<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
 		<capabilities>
-			<capability>
-				urn:ietf:params:netconf:base:1.1
-			</capability>
-			<capability>
-				urn:ietf:params:netconf:capability:startup:1.0
-			</capability>
-			<capability>
-				http://example.net/router/2.3/myfeature
-			</capability>
+			<capability>urn:ietf:params:netconf:base:1.1</capability>
+			<capability>urn:ietf:params:netconf:capability:startup:1.0</capability>
+			<capability>http://example.net/router/2.3/myfeature</capability>
 		</capabilities>
 		<session-id>4</session-id>
 	</hello>`

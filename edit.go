@@ -1,13 +1,13 @@
 package netconf
 
 import (
-	"encoding/xml"
 	"fmt"
 	"strings"
 
 	"github.com/freeconf/yang/meta"
 	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/nodeutil"
+	"github.com/freeconf/yang/patch/xml"
 	"github.com/freeconf/yang/val"
 )
 

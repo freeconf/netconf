@@ -2,7 +2,6 @@ package netconf
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"strings"
@@ -12,18 +11,19 @@ import (
 	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/nodeutil"
 	"github.com/freeconf/yang/parser"
+	"github.com/freeconf/yang/patch/xml"
 	"github.com/freeconf/yang/source"
 )
 
-func TestFilterCompile(t *testing.T) {
+func TestSubtreeCompile(t *testing.T) {
 	tests := []struct {
 		filter   string
-		expected *filter
+		expected *subtreeFilter
 	}{
 		{
 			filter: `<x><y /></x>`,
-			expected: &filter{
-				containment: map[xml.Name]*filter{
+			expected: &subtreeFilter{
+				containment: map[xml.Name]*subtreeFilter{
 					{Local: "x"}: {
 						selection: []xml.Name{
 							{Local: "y"},
@@ -34,8 +34,8 @@ func TestFilterCompile(t *testing.T) {
 		},
 		{
 			filter: `<x><y>burrito</y></x>`,
-			expected: &filter{
-				containment: map[xml.Name]*filter{
+			expected: &subtreeFilter{
+				containment: map[xml.Name]*subtreeFilter{
 					{Local: "x"}: {
 						matching: []contentMatching{
 							{
@@ -49,8 +49,8 @@ func TestFilterCompile(t *testing.T) {
 		},
 		{
 			filter: `<x><z/><y>burrito</y></x>`,
-			expected: &filter{
-				containment: map[xml.Name]*filter{
+			expected: &subtreeFilter{
+				containment: map[xml.Name]*subtreeFilter{
 					{Local: "x"}: {
 						selection: []xml.Name{
 							{Local: "z"},
@@ -67,8 +67,8 @@ func TestFilterCompile(t *testing.T) {
 		},
 		{
 			filter: `<x><z/><y>burrito</y><q abc="123"/></x>`,
-			expected: &filter{
-				containment: map[xml.Name]*filter{
+			expected: &subtreeFilter{
+				containment: map[xml.Name]*subtreeFilter{
 					{Local: "x"}: {
 						selection: []xml.Name{
 							{Local: "z"},
@@ -79,7 +79,7 @@ func TestFilterCompile(t *testing.T) {
 								value: "burrito",
 							},
 						},
-						containment: map[xml.Name]*filter{
+						containment: map[xml.Name]*subtreeFilter{
 							{Local: "q"}: {
 								matching: []contentMatching{
 									{
@@ -98,15 +98,15 @@ func TestFilterCompile(t *testing.T) {
 		var xf Msg
 		d := xml.NewDecoder(strings.NewReader(test.filter))
 		fc.RequireEqual(t, nil, d.Decode(&xf))
-		var f filter
-		fc.AssertEqual(t, nil, compileFilterComponents(&xf, &f))
+		var f subtreeFilter
+		fc.AssertEqual(t, nil, compileSubtreeComponents(&xf, &f))
 		var actual bytes.Buffer
 		dumpTestFilter(&actual, &f, "")
 		fc.AssertEqual(t, test.expected, &f, actual.String())
 	}
 }
 
-func TestFilter(t *testing.T) {
+func newTestData() *node.Browser {
 	data := `{
 		"users" : {
 			"user" : [{
@@ -147,8 +147,11 @@ func TestFilter(t *testing.T) {
 	}`
 	n := nodeutil.ReadJSON(data)
 	m := parser.RequireModule(source.Dir("./testdata/yang"), "top")
-	b := node.NewBrowser(m, n)
+	return node.NewBrowser(m, n)
+}
 
+func TestSubtree(t *testing.T) {
+	b := newTestData()
 	tests := []struct {
 		desc     string
 		filter   string
@@ -232,16 +235,16 @@ func TestFilter(t *testing.T) {
 	}
 }
 
-func compileTestFilter(t *testing.T, fstr string) *filter {
+func compileTestFilter(t *testing.T, fstr string) *subtreeFilter {
 	d := xml.NewDecoder(strings.NewReader(fstr))
 	var xf Msg
 	fc.RequireEqual(t, nil, d.Decode(&xf))
-	var f filter
-	fc.RequireEqual(t, nil, compileFilter(&xf, &f))
+	var f subtreeFilter
+	fc.RequireEqual(t, nil, compileSubtree(&xf, &f))
 	return &f
 }
 
-func dumpTestFilter(w io.Writer, f *filter, indent string) {
+func dumpTestFilter(w io.Writer, f *subtreeFilter, indent string) {
 	for _, m := range f.matching {
 		fmt.Fprintf(w, "%s  matching:%s=%s\n", indent, m.field, m.value)
 	}

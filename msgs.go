@@ -1,7 +1,13 @@
 package netconf
 
 import (
-	"encoding/xml"
+	"fmt"
+
+	"github.com/freeconf/restconf/device"
+	"github.com/freeconf/yang/meta"
+	"github.com/freeconf/yang/node"
+	"github.com/freeconf/yang/patch/xml"
+	"github.com/freeconf/yang/xpath"
 
 	"github.com/freeconf/yang/nodeutil"
 )
@@ -77,11 +83,76 @@ type RpcSource struct {
 }
 
 type RpcGet struct {
-	Source *MsgLeaf   `xml:"source,omitempty"`
+	Source *Msg       `xml:"source,omitempty"`
 	Filter *RpcFilter `xml:"filter,omitempty"`
 }
 
 type RpcFilter struct {
-	Type  string `xml:"type,attr"`
+	Type string `xml:"type,attr"`
+
+	// when Type is "xpath"
+	Select     string `xml:"select,omitempty"`
+	shortcodes map[string]string
+
 	Elems []*Msg `xml:",any"`
+}
+
+func addNamespaces(ns map[string]*meta.Module, m *meta.Module) {
+	ns[m.Namespace()] = m
+	for _, child := range m.Imports() {
+		addNamespaces(ns, child.Module())
+	}
+}
+
+func deviceNamespaces(d device.Device, shortcodes map[string]string) xpath.ShortcodeToModule {
+	namespaces := make(map[string]*meta.Module)
+	for _, m := range d.Modules() {
+		addNamespaces(namespaces, m)
+	}
+	return func(shortcode string) (*meta.Module, error) {
+		ns, found := shortcodes[shortcode]
+		if !found {
+			return nil, fmt.Errorf("namespace for shortcode '%s' not found", shortcode)
+		}
+		mod, found := namespaces[ns]
+		if !found {
+			return nil, fmt.Errorf("module for namespace '%s' not found", ns)
+		}
+		return mod, nil
+	}
+}
+
+func (f *RpcFilter) CompileXPath(d device.Device) (*node.Selection, error) {
+	if f.Type == "xpath" && f.Select != "" {
+		lookup := deviceNamespaces(d, f.shortcodes)
+		top, err := xpath.Parse2(lookup, f.Select)
+		if err != nil {
+			return nil, err
+		}
+		b, err := d.Browser(top.Ident)
+		if err != nil {
+			return nil, err
+		}
+		root := b.Root()
+		if top.Next == nil {
+			return root, nil
+		}
+		return root.XFind(top.Next)
+	}
+	return nil, fmt.Errorf("not a valid xpath filter")
+}
+
+func (rf *RpcFilter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	copy := struct {
+		Type   string `xml:"type,attr"`
+		Select string `xml:"select,omitempty"`
+		Elems  []*Msg `xml:",any"`
+	}{}
+	if err := d.DecodeElement(&copy, &start); err != nil {
+		return err
+	}
+	rf.Elems = copy.Elems
+	rf.Type = copy.Type
+	rf.Select = copy.Select
+	return nil
 }

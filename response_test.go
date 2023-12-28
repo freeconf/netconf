@@ -1,20 +1,11 @@
 package netconf
 
 import (
-	"encoding/xml"
 	"testing"
 
 	"github.com/freeconf/yang/fc"
+	"github.com/freeconf/yang/patch/xml"
 )
-
-// func TestRpcResponse(t *testing.T) {
-// 	var buf bytes.Buffer
-// 	r := ResponseWriter{Out: &buf}
-// 	rpc := &RpcMsg{}
-// 	r.openRpcReplyContent(rpc, "x")
-// 	r.closeRpcReplyContent(rpc, "x")
-// 	fc.AssertEqual(t, `<rpc-reply><x></x></rpc-reply>`, buf.String())
-// }
 
 func TestXmlWriter(t *testing.T) {
 	tests := []struct {

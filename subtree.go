@@ -2,31 +2,31 @@ package netconf
 
 import (
 	"context"
-	"encoding/xml"
 	"strings"
 
 	"github.com/freeconf/yang/node"
+	"github.com/freeconf/yang/patch/xml"
 	"github.com/freeconf/yang/val"
 )
 
-type filterContextKeyType struct{}
+type subtreeContextKeyType struct{}
 
-var filterContextKey = filterContextKeyType{}
+var subtreeContextKey = subtreeContextKeyType{}
 
-type filter struct {
-	containment map[xml.Name]*filter
+type subtreeFilter struct {
+	containment map[xml.Name]*subtreeFilter
 	selection   []xml.Name
 	matching    []contentMatching
 }
 
-var filterSelectNone = &filter{}
+var subtreeSelectNone = &subtreeFilter{}
 
-func (f *filter) selectAll() bool {
+func (f *subtreeFilter) selectAll() bool {
 	return len(f.containment) == 0 && len(f.selection) == 0 && len(f.matching) == 0
 }
 
-func (f *filter) selected(ident string) (*filter, bool) {
-	if f == filterSelectNone {
+func (f *subtreeFilter) selected(ident string) (*subtreeFilter, bool) {
+	if f == subtreeSelectNone {
 		return f, false
 	}
 	if f.selectAll() {
@@ -37,7 +37,7 @@ func (f *filter) selected(ident string) (*filter, bool) {
 	}
 	for _, s := range f.selection {
 		if ident == s.Local {
-			return &filter{}, true
+			return &subtreeFilter{}, true
 		}
 	}
 	for _, m := range f.matching {
@@ -45,7 +45,7 @@ func (f *filter) selected(ident string) (*filter, bool) {
 			return f, true
 		}
 	}
-	return filterSelectNone, false
+	return subtreeSelectNone, false
 }
 
 type contentMatching struct {
@@ -53,20 +53,20 @@ type contentMatching struct {
 	value string
 }
 
-func compileFilter(x *Msg, f *filter) error {
+func compileSubtree(x *Msg, f *subtreeFilter) error {
 	for _, e := range x.Elems {
-		if err := compileFilterComponents(e, f); err != nil {
+		if err := compileSubtreeComponents(e, f); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func compileFilterComponents(x *Msg, f *filter) error {
+func compileSubtreeComponents(x *Msg, f *subtreeFilter) error {
 	if len(x.Elems) > 0 || len(x.Attrs) > 0 {
-		child := &filter{}
+		child := &subtreeFilter{}
 		if f.containment == nil {
-			f.containment = make(map[xml.Name]*filter)
+			f.containment = make(map[xml.Name]*subtreeFilter)
 		}
 		f.containment[x.XMLName] = child
 		if len(x.Attrs) > 0 {
@@ -78,7 +78,7 @@ func compileFilterComponents(x *Msg, f *filter) error {
 			}
 		} else {
 			for _, e := range x.Elems {
-				if err := compileFilterComponents(e, child); err != nil {
+				if err := compileSubtreeComponents(e, child); err != nil {
 					return err
 				}
 			}
@@ -98,19 +98,19 @@ func compileFilterComponents(x *Msg, f *filter) error {
 	return nil
 }
 
-func (root *filter) CheckContainerPreConstraints(r *node.ChildRequest) (bool, error) {
+func (root *subtreeFilter) CheckContainerPreConstraints(r *node.ChildRequest) (bool, error) {
 	f := root.currentFilter(r.Selection)
 	_, selected := f.selected(r.Meta.Ident())
 	return selected, nil
 }
 
-func (root *filter) CheckFieldPreConstraints(r *node.FieldRequest, hnd *node.ValueHandle) (bool, error) {
+func (root *subtreeFilter) CheckFieldPreConstraints(r *node.FieldRequest, hnd *node.ValueHandle) (bool, error) {
 	f := root.currentFilter(r.Selection)
 	_, selected := f.selected(r.Meta.Ident())
 	return selected, nil
 }
 
-func (root *filter) CheckListPostConstraints(r node.ListRequest, child *node.Selection, key []val.Value) (bool, bool, error) {
+func (root *subtreeFilter) CheckListPostConstraints(r node.ListRequest, child *node.Selection, key []val.Value) (bool, bool, error) {
 	f := root.currentFilter(r.Selection)
 	if f.selectAll() {
 		return true, true, nil
@@ -131,19 +131,19 @@ func (root *filter) CheckListPostConstraints(r node.ListRequest, child *node.Sel
 	return true, true, nil
 }
 
-func (root *filter) currentFilter(s *node.Selection) *filter {
-	if found := s.Context.Value(filterContextKey); found != nil {
-		return found.(*filter)
+func (root *subtreeFilter) currentFilter(s *node.Selection) *subtreeFilter {
+	if found := s.Context.Value(subtreeContextKey); found != nil {
+		return found.(*subtreeFilter)
 	}
 	return root
 }
 
-func (root *filter) ContextConstraint(s *node.Selection) context.Context {
+func (root *subtreeFilter) ContextConstraint(s *node.Selection) context.Context {
 	if s.InsideList {
 		return s.Context
 	}
 	f := root.currentFilter(s)
 	ctx := s.Context
 	next, _ := f.selected(s.Meta().Ident())
-	return context.WithValue(ctx, filterContextKey, next)
+	return context.WithValue(ctx, subtreeContextKey, next)
 }
