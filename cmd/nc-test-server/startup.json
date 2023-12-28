@@ -4,7 +4,9 @@
         "ssh" : {
             "options" : {
                 "port": ":9999",
-                "hostKeyFile" : "host.key"    
+                "hostKeyFile" : "host.key",
+                "adminPassword" : "bobo",
+                "adminKey": "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA38wXOFqIqbguyzSVpL5h0NnO8Rz+dC1FbPMTV5MSOQlqu+EmwbHhR5l60J1r3Sly7sUe+6cenQV0WxONZ+psPGl8bolw/RPrX3dDo3wSCtCbrdPy/9+y2nGrRfA7c8xE9ojIz7ewy94S39mmz//lq3IXNiND1uJysLYnxSC/2f0= dhubler@gw2k.localdomain"
             }
         }
     }

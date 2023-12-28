@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 
 	"github.com/freeconf/restconf/device"
@@ -23,12 +22,13 @@ type Session struct {
 	inRaw io.Reader
 	in    <-chan io.Reader
 	Id    int64
+	user  string
 }
 
 // ErrEOS signals the session should be closed gracefully.
 var ErrEOS = errors.New("end of session") // not really an error but linter wants "Err" prefix
 
-func NewSession(mgr SessionManager, dev device.Device, in io.Reader, out io.Writer) *Session {
+func NewSession(mgr SessionManager, user string, dev device.Device, in io.Reader, out io.Writer) *Session {
 	return &Session{
 		mgr:   mgr,
 		dev:   dev,
@@ -36,7 +36,12 @@ func NewSession(mgr SessionManager, dev device.Device, in io.Reader, out io.Writ
 		inRaw: in,
 		in:    NewChunkedRdr(in),
 		out:   out,
+		user:  user,
 	}
+}
+
+func (ses *Session) User() string {
+	return ses.user
 }
 
 func (ses *Session) readMessages(ctx context.Context) error {
@@ -184,11 +189,11 @@ func (ses *Session) handleEdit(edit *RpcEdit, resp *RpcReply) error {
 			}
 			switch e.op {
 			case "merge":
-				err = sel.UpsertFrom(nodeutil.Dump(e.n, os.Stdout))
+				err = sel.UpsertFrom(e.n)
 			case "replace":
-				err = sel.ReplaceFrom(nodeutil.Dump(e.n, os.Stdout))
+				err = sel.ReplaceFrom(e.n)
 			case "create":
-				err = sel.InsertFrom(nodeutil.Dump(e.n, os.Stdout))
+				err = sel.InsertFrom(e.n)
 			case "remove":
 				if sel != nil {
 					err = sel.Delete()

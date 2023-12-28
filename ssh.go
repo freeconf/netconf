@@ -3,8 +3,8 @@ package netconf
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 
@@ -24,8 +24,11 @@ type SshHandler struct {
 }
 
 type SshOptions struct {
-	Port        string
-	HostKeyFile string
+	Port          string
+	HostKeyFile   string
+	AdminUsername string
+	AdminPassword string
+	AdminKey      string
 }
 
 func NewSshHandler(h SessionManager, dev device.Device) *SshHandler {
@@ -75,8 +78,25 @@ func (s *SshHandler) Status() SshStatus {
 }
 
 func (s *SshHandler) keyAuth(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-	log.Println(conn.RemoteAddr(), "authenticate with", key.Type())
-	return nil, nil
+	fc.Info.Printf("user '%s' from %s authenticated with key type %s", conn.User(), conn.RemoteAddr(), key.Type())
+	if conn.User() == s.opts.AdminUsername {
+
+		// consider moving this to options loading to be done once
+		pubkey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(s.opts.AdminKey))
+		if err != nil {
+			return nil, err
+		}
+		adminKey := pubkey.Marshal()
+
+		if string(key.Marshal()) == string(adminKey) {
+			fc.Info.Printf("valid key auth for '%s'", conn.User())
+			return nil, nil
+		}
+		fc.Info.Printf("invalid key auth attempt for '%s'", conn.User())
+	} else {
+		fc.Info.Printf("invalid key auth for '%s'", conn.User())
+	}
+	return nil, ErrInvalidLogin
 }
 
 func (s *SshHandler) handleNewChannels(conn *ssh.ServerConn, newChannelRequests <-chan ssh.NewChannel) {
@@ -97,9 +117,11 @@ func (s *SshHandler) handleConn(conn *ssh.ServerConn, c ssh.NewChannel) {
 		fc.Debug.Println("ssh: fail to accept channel request", err)
 		return
 	}
-	sess := NewSession(s.host, s.dev, ch, ch)
+	user := conn.Conn.User()
+	sess := NewSession(s.host, user, s.dev, ch, ch)
 	ctx := context.Background()
 	go func(in <-chan *ssh.Request) {
+
 		defer fc.Debug.Printf("ssh: exiting ses=%d", sess.Id)
 		defer ch.Close()
 		for {
@@ -144,6 +166,19 @@ func (s *SshHandler) handleConn(conn *ssh.ServerConn, c ssh.NewChannel) {
 	}(reqs)
 }
 
+var ErrInvalidLogin = errors.New("invalid login")
+
+func (s *SshHandler) adminPasswordCheck(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
+	if conn.User() == s.opts.AdminUsername {
+		if s.opts.AdminPassword == string(password) {
+			fc.Debug.Printf("password verified for '%s'", s.opts.AdminUsername)
+			return nil, nil
+		}
+	}
+	fc.Info.Printf("invalid password attempt for '%s'", conn.User())
+	return nil, ErrInvalidLogin
+}
+
 func (s *SshHandler) rejectGlobalRequests(requests <-chan *ssh.Request) {
 	for request := range requests {
 		if request.WantReply {
@@ -160,6 +195,7 @@ func (s *SshHandler) start() error {
 	}
 	config := ssh.ServerConfig{
 		PublicKeyCallback: s.keyAuth,
+		PasswordCallback:  s.adminPasswordCheck,
 	}
 	config.AddHostKey(s.hostPrivateKeySigner)
 
