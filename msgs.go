@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/freeconf/restconf/device"
 	"github.com/freeconf/yang/meta"
@@ -44,16 +45,24 @@ type HelloMsg struct {
 }
 
 type RpcMsg struct {
-	XMLName    xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
-	MessageId  string     `xml:"message-id,attr"`
-	Attrs      []xml.Attr `xml:",any,attr"`
-	GetConfig  *RpcGet    `xml:"get-config,omitempty"`
-	Get        *RpcGet    `xml:"get,omitempty"`
-	EditConfig *RpcEdit   `xml:"edit-config,omitempty"`
-	Copy       *RpcCopy   `xml:"copy-config,omitempty"`
-	Delete     *RpcEdit   `xml:"delete-config,omitempty"`
-	Close      *Msg       `xml:"close-session,omitempty"`
-	Kill       *Msg       `xml:"kill-session,omitempty"`
+	XMLName            xml.Name            `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
+	MessageId          string              `xml:"message-id,attr"`
+	Attrs              []xml.Attr          `xml:",any,attr"`
+	GetConfig          *RpcGet             `xml:"get-config,omitempty"`
+	Get                *RpcGet             `xml:"get,omitempty"`
+	EditConfig         *RpcEdit            `xml:"edit-config,omitempty"`
+	Copy               *RpcCopy            `xml:"copy-config,omitempty"`
+	Delete             *RpcEdit            `xml:"delete-config,omitempty"`
+	Close              *Msg                `xml:"close-session,omitempty"`
+	Kill               *Msg                `xml:"kill-session,omitempty"`
+	CreateSubscription *CreateSubscription `xml:"create-subscription,omitempty"`
+}
+
+type CreateSubscription struct {
+	StartTime time.Time  `xml:"startTime,omitempty"`
+	StopTime  time.Time  `xml:"stopTime,omitempty"`
+	Filter    *RpcFilter `xml:"filter,omitempty"`
+	Stream    string     `xml:"stream,omitempty"`
 }
 
 type RpcCopy struct {

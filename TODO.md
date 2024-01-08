@@ -1,7 +1,6 @@
 ## TODO
 Roughly in order of importance
 
-* tcp messaging layer
 * startup datastore
 * candidate datastore
 * client
@@ -23,6 +22,7 @@ Roughly in order of importance
       rollback-on-error
 * limit message handling to single threaded
   * "The managed device MUST send responses only in the order the requests were received." (pipelining)
+* tcp messaging layer
 * enable python
 * update docs
 

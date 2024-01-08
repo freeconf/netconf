@@ -28,7 +28,7 @@ func (api api) ssh(s *SshHandler) node.Node {
 				return api.sshOptions(s), nil
 			case "status":
 				s := s.Status()
-				return n.New(&s), nil
+				return n.New(r.Meta, &s)
 			}
 			return n.DoChild(r)
 		},

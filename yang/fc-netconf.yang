@@ -15,14 +15,15 @@ module fc-netconf {
                 type string;
             }
 
+            // Incredicibly basic implementaton, should eventually consider implementing
+            //  https://www.ietf.org/archive/id/draft-ietf-netconf-keystore-29.html
+
             leaf adminUsername {
                 description "To use a user name other than 'admin'";
                 type string;
                 default "admin";
             }
 
-            // Incredicibly basic implementaton, should eventually consider implementing
-            //  https://www.ietf.org/archive/id/draft-ietf-netconf-keystore-29.html
             leaf adminPassword {
                 description "Clear text password to use for authenticating 'admin' login.";
                 type string;
