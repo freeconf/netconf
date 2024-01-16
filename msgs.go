@@ -28,10 +28,11 @@ type MsgLeaf struct {
 }
 
 type RpcReply struct {
-	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
-	MessageId string   `xml:"message-id,attr"`
-	OK        *Msg     `xml:"ok,omitempty"`
-	Data      *RpcData `xml:"data,omitempty"`
+	XMLName   xml.Name            `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
+	MessageId string              `xml:"message-id,attr"`
+	OK        *Msg                `xml:"ok,omitempty"`
+	Data      *RpcData            `xml:"data,omitempty"`
+	Out       []*nodeutil.XMLWtr2 `xml:",any"`
 }
 
 type RpcData struct {
@@ -56,6 +57,7 @@ type RpcMsg struct {
 	Close              *Msg                `xml:"close-session,omitempty"`
 	Kill               *Msg                `xml:"kill-session,omitempty"`
 	CreateSubscription *CreateSubscription `xml:"create-subscription,omitempty"`
+	Action             *nodeutil.XmlNode   `xml:",any"`
 }
 
 type CreateSubscription struct {
@@ -104,6 +106,11 @@ type RpcFilter struct {
 	shortcodes map[string]string
 
 	Elems []*Msg `xml:",any"`
+}
+
+type Notification struct {
+	EventTime time.Time        `xml:"eventTime"`
+	Event     nodeutil.XmlNode `xml:"event"`
 }
 
 func addNamespaces(ns map[string]*meta.Module, m *meta.Module) {

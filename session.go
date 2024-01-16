@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/freeconf/restconf/device"
+	"github.com/freeconf/restconf/estream"
 	"github.com/freeconf/yang/fc"
 	"github.com/freeconf/yang/meta"
 	"github.com/freeconf/yang/node"
@@ -127,6 +128,15 @@ func (ses *Session) readFilter(f *RpcFilter, c node.ContentConstraint) ([]*node.
 	return sels, nil
 }
 
+func (ses *Session) findBrowserByNs(ns string) (*node.Browser, error) {
+	for _, mod := range ses.dev.Modules() {
+		if mod.Namespace() == ns {
+			return ses.dev.Browser(mod.Ident())
+		}
+	}
+	return nil, fmt.Errorf("browser for namespace '%s' not found", ns)
+}
+
 const (
 	Base_1_1 = "urn:ietf:params:netconf:base:1.1"
 )
@@ -138,6 +148,7 @@ func (ses *Session) Hello() *HelloMsg {
 		SessionId: strconv.FormatInt(ses.Id, 10),
 		Capabilities: []*Msg{
 			{Content: Base_1_1},
+			{Content: "urn:ietf:params:netconf:capability:notification:1.0"},
 		},
 	}
 }
@@ -215,6 +226,29 @@ func (ses *Session) handleEdit(edit *RpcEdit, resp *RpcReply) error {
 	return nil
 }
 
+func (ses *Session) handleAction(rpc *nodeutil.XmlNode) (*nodeutil.XMLWtr2, error) {
+	b, err := ses.findBrowserByNs(rpc.XMLName.Space)
+	if err != nil {
+		return nil, err
+	}
+	sel, err := b.Root().Find(rpc.XMLName.Local)
+	if err != nil {
+		return nil, err
+	}
+	out, err := sel.Action(rpc)
+	if err != nil {
+		return nil, err
+	}
+	if out != nil {
+		var resp nodeutil.XMLWtr2
+		if err := out.UpsertInto(&resp); err != nil {
+			return nil, err
+		}
+		return &resp, nil
+	}
+	return nil, nil
+}
+
 func (ses *Session) handleRpc(rpc *RpcMsg) error {
 	close := false
 	var err error
@@ -237,6 +271,20 @@ func (ses *Session) handleRpc(rpc *RpcMsg) error {
 		fc.Debug.Printf("close message ses=%d", ses.Id)
 		resp.OK = &Msg{}
 		close = true
+	} else if rpc.CreateSubscription != nil {
+		fc.Debug.Printf("create subscription message ses=%d", ses.Id)
+		err = ses.handleCreateSubscription(rpc.CreateSubscription)
+	} else if rpc.Action != nil {
+		fc.Debug.Printf("rpc/action ses=%d", ses.Id)
+		var out *nodeutil.XMLWtr2
+		out, err = ses.handleAction(rpc.Action)
+		if err == nil {
+			if out == nil {
+				resp.OK = &Msg{}
+			} else {
+				resp.Out = out.Elem
+			}
+		}
 	} else {
 		err = fmt.Errorf("unrecognized rpc command")
 	}
@@ -252,6 +300,33 @@ func (ses *Session) handleRpc(rpc *RpcMsg) error {
 		return ErrEOS
 	}
 	return nil
+}
+
+func (ses *Session) handleCreateSubscription(create *CreateSubscription) error {
+	req := estream.EstablishRequest{
+		Stream: create.Stream,
+		// pass along possible filter
+	}
+	sub, err := ses.mgr.StreamService().EstablishSubscription(req)
+	if err != nil {
+		return err
+	}
+	name := fmt.Sprintf("sub-%s", sub.Id)
+	err = sub.AddReceiver(name, func(e estream.ReceiverEvent) (estream.RecvState, error) {
+		resp := Notification{
+			EventTime: e.EventTime,
+		}
+		if err := e.Event.UpsertInto(&resp.Event); err != nil {
+			return estream.RecvStateSuspended, fmt.Errorf("error encoding event %w", err)
+		}
+		out := NewChunkedWtr(ses.out)
+		defer out.Close()
+		if err = WriteResponse(resp, out); err != nil {
+			return estream.RecvStateSuspended, fmt.Errorf("error encoding notification %w", err)
+		}
+		return estream.RecvStateActive, nil
+	})
+	return err
 }
 
 func (ses *Session) handleHello(h *HelloMsg) error {

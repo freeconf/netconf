@@ -4,9 +4,11 @@ import (
 	"github.com/freeconf/netconf"
 	"github.com/freeconf/restconf"
 	"github.com/freeconf/restconf/device"
-	"github.com/freeconf/restconf/testdata"
+	"github.com/freeconf/restconf/estream"
 	"github.com/freeconf/yang/fc"
+	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/source"
+	"github.com/freeconf/yang/testdata/car"
 )
 
 // Start the car app with NETCONF Server support to test NETCONF clients
@@ -18,15 +20,25 @@ import (
 
 func main() {
 	fc.DebugLog(true)
-	c := testdata.New()
-	api := testdata.Manage(c)
+	c := car.New()
+	api := car.Manage(c)
 	ypath := source.Any(
-		source.Path("../../testdata/yang:../../yang"),
+		source.Path("../../yang"),
 		restconf.InternalYPath,
+		car.YPath,
 	)
 	d := device.New(ypath)
 	d.Add("car", api)
-	netconf.NewServer(d)
+	streams := estream.NewService()
+	streams.AddStream(estream.Stream{
+		Name: "car:update",
+		Open: func() (*node.Selection, error) {
+			b, err := d.Browser("car")
+			chkerr(err)
+			return b.Root().Find("update")
+		},
+	})
+	netconf.NewServer(d, streams)
 	chkerr(d.ApplyStartupConfigFile("startup.json"))
 	select {}
 }

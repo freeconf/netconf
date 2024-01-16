@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"github.com/freeconf/restconf/device"
+	"github.com/freeconf/restconf/estream"
 )
 
 type Server struct {
@@ -9,16 +10,19 @@ type Server struct {
 	main       device.Device
 	sessNum    int64
 	sshHandler *SshHandler
+	streams    *estream.Service
 }
 
 type SessionManager interface {
 	NextSessionId() int64
+	StreamService() *estream.Service
 	HandleErr(err error)
 }
 
-func NewServer(d *device.Local) *Server {
+func NewServer(d *device.Local, streams *estream.Service) *Server {
 	s := &Server{
-		main: d,
+		main:    d,
+		streams: streams,
 	}
 	s.sshHandler = NewSshHandler(s, d)
 
@@ -26,6 +30,10 @@ func NewServer(d *device.Local) *Server {
 		panic(err)
 	}
 	return s
+}
+
+func (s *Server) StreamService() *estream.Service {
+	return s.streams
 }
 
 func (s *Server) HandleErr(err error) {

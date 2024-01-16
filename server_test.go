@@ -5,6 +5,7 @@ import (
 
 	"github.com/freeconf/restconf"
 	"github.com/freeconf/restconf/device"
+	"github.com/freeconf/restconf/estream"
 	"github.com/freeconf/yang/fc"
 	"github.com/freeconf/yang/nodeutil"
 	"github.com/freeconf/yang/source"
@@ -15,8 +16,9 @@ func TestServer(t *testing.T) {
 		restconf.InternalYPath,
 		source.Dir("./yang"),
 	)
+	streams := estream.NewService()
 	d := device.New(ypath)
-	s := NewServer(d)
+	s := NewServer(d, streams)
 	d.Add("fc-netconf", Api(s))
 	b, err := d.Browser("fc-netconf")
 	fc.RequireEqual(t, nil, err)
@@ -32,6 +34,7 @@ func TestServer(t *testing.T) {
 	`))
 	fc.AssertEqual(t, nil, err)
 	fc.AssertEqual(t, true, s.sshHandler.Status().Running)
+	// configure again to test service live re-config
 	err = b.Root().UpdateFrom(nodeutil.ReadJSON(`
 	{
 		"ssh": {

@@ -1,6 +1,14 @@
 ## TODO
 Roughly in order of importance
 
+
+* notifications
+* error handling
+  * rpc-error - service layer errrs
+    * error-type, error-tag, error-severity
+    * error-app-tag, error-path
+    * error-message, error-info
+
 * startup datastore
 * candidate datastore
 * client
@@ -26,10 +34,6 @@ Roughly in order of importance
 * enable python
 * update docs
 
-* rpc-error - service layer errrs
-  * error-type, error-tag, error-severity
-  * error-app-tag, error-path
-  * error-message, error-info
 
 ## Done
 * Get user name to session (done: bare minimum)

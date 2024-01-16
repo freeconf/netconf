@@ -69,6 +69,22 @@ func CleanWhitespace(elems ...*Msg) {
 	}
 }
 
+func TestAction(t *testing.T) {
+	payload := `
+	<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+	  <rock-the-house xmlns="urn:example:rock">
+	     <zip-code>27606-0100</zip-code>
+      </rock-the-house>	
+	</rpc>`
+
+	// read/decode
+	msg, err := DecodeRequest(strings.NewReader(payload))
+	fc.RequireEqual(t, nil, err)
+	fc.RequireEqual(t, true, msg.Rpc != nil)
+	fc.RequireEqual(t, true, msg.Rpc.Action != nil)
+	fc.AssertEqual(t, "rock-the-house", msg.Rpc.Action.XMLName.Local)
+}
+
 func TestHello(t *testing.T) {
 	payload := `
 	<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
