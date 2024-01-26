@@ -3,6 +3,7 @@ package netconf
 import (
 	"github.com/freeconf/restconf/device"
 	"github.com/freeconf/restconf/estream"
+	"github.com/freeconf/yang/fc"
 )
 
 type Server struct {
@@ -29,6 +30,9 @@ func NewServer(d *device.Local, streams *estream.Service) *Server {
 	if err := d.Add("fc-netconf", Api(s)); err != nil {
 		panic(err)
 	}
+	if err := d.Add("ietf-subscribed-notifications", estream.Manage(streams)); err != nil {
+		panic(err)
+	}
 	return s
 }
 
@@ -37,7 +41,7 @@ func (s *Server) StreamService() *estream.Service {
 }
 
 func (s *Server) HandleErr(err error) {
-	panic(err)
+	fc.Err.Print(err)
 }
 
 func (s *Server) NextSessionId() int64 {

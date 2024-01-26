@@ -145,7 +145,7 @@ func newTestData() *node.Browser {
 			"purpose" : "dns"
 		}]
 	}`
-	n := nodeutil.ReadJSON(data)
+	n := readJson(data)
 	m := parser.RequireModule(source.Dir("./testdata/yang"), "top")
 	return node.NewBrowser(m, n)
 }

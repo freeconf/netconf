@@ -23,8 +23,9 @@ func main() {
 	c := car.New()
 	api := car.Manage(c)
 	ypath := source.Any(
-		source.Path("../../yang"),
+		source.Dir("../../yang"),
 		restconf.InternalYPath,
+		restconf.InternalIetfRfcYPath,
 		car.YPath,
 	)
 	d := device.New(ypath)

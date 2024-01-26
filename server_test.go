@@ -7,6 +7,7 @@ import (
 	"github.com/freeconf/restconf/device"
 	"github.com/freeconf/restconf/estream"
 	"github.com/freeconf/yang/fc"
+	"github.com/freeconf/yang/node"
 	"github.com/freeconf/yang/nodeutil"
 	"github.com/freeconf/yang/source"
 )
@@ -14,6 +15,7 @@ import (
 func TestServer(t *testing.T) {
 	ypath := source.Any(
 		restconf.InternalYPath,
+		restconf.InternalIetfRfcYPath,
 		source.Dir("./yang"),
 	)
 	streams := estream.NewService()
@@ -22,7 +24,7 @@ func TestServer(t *testing.T) {
 	d.Add("fc-netconf", Api(s))
 	b, err := d.Browser("fc-netconf")
 	fc.RequireEqual(t, nil, err)
-	err = b.Root().UpdateFrom(nodeutil.ReadJSON(`
+	err = b.Root().UpdateFrom(readJson(`
 	{
 		"ssh": {
 			"options" : {
@@ -35,7 +37,7 @@ func TestServer(t *testing.T) {
 	fc.AssertEqual(t, nil, err)
 	fc.AssertEqual(t, true, s.sshHandler.Status().Running)
 	// configure again to test service live re-config
-	err = b.Root().UpdateFrom(nodeutil.ReadJSON(`
+	err = b.Root().UpdateFrom(readJson(`
 	{
 		"ssh": {
 			"options" : {
@@ -47,4 +49,12 @@ func TestServer(t *testing.T) {
 	`))
 	fc.AssertEqual(t, nil, err)
 	fc.AssertEqual(t, true, s.sshHandler.Status().Running)
+}
+
+func readJson(s string) node.Node {
+	n, err := nodeutil.ReadJSON(s)
+	if err != nil {
+		panic(err)
+	}
+	return n
 }

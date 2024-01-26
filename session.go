@@ -102,6 +102,9 @@ func (ses *Session) readFilter(f *RpcFilter, c node.ContentConstraint) ([]*node.
 		if err != nil {
 			return nil, err
 		}
+		if b == nil {
+			return nil, fmt.Errorf("browser for '%s' not found", e.XMLName.Local)
+		}
 		if e.XMLName.Space != "" {
 			if b.Meta.Namespace() != e.XMLName.Space {
 				continue
@@ -312,19 +315,19 @@ func (ses *Session) handleCreateSubscription(create *CreateSubscription) error {
 		return err
 	}
 	name := fmt.Sprintf("sub-%s", sub.Id)
-	err = sub.AddReceiver(name, func(e estream.ReceiverEvent) (estream.RecvState, error) {
+	err = sub.AddReceiver(name, func(e estream.ReceiverEvent) error {
 		resp := Notification{
 			EventTime: e.EventTime,
 		}
 		if err := e.Event.UpsertInto(&resp.Event); err != nil {
-			return estream.RecvStateSuspended, fmt.Errorf("error encoding event %w", err)
+			return fmt.Errorf("error encoding event %w", err)
 		}
 		out := NewChunkedWtr(ses.out)
 		defer out.Close()
 		if err = WriteResponse(resp, out); err != nil {
-			return estream.RecvStateSuspended, fmt.Errorf("error encoding notification %w", err)
+			return fmt.Errorf("error encoding notification %w", err)
 		}
-		return estream.RecvStateActive, nil
+		return nil
 	})
 	return err
 }
