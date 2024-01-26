@@ -1,5 +1,9 @@
+github.com/freeconf/restconf v0.0.0-20240126143528-7e8989aa69af h1:QXDFU+dC+QFyB2spvbjBevdkgA2WQggnfrBtgTU/cJI=
+github.com/freeconf/restconf v0.0.0-20240126143528-7e8989aa69af/go.mod h1:kzPI+Q9qN7BWQWO+8bDq3lsDenL20Bzsjof84wEAfoI=
 github.com/freeconf/yang v0.0.0-20231204020737-7fbe9986445b h1:mTe3dpkTPBxGd8sKHKFUj+q8IGVCsvlb0XwFYO5HM6g=
 github.com/freeconf/yang v0.0.0-20231204020737-7fbe9986445b/go.mod h1:mWEJ47bQKL2+1uMaHsA6VjRtoO+svJ2LcIiN+StJqNY=
+github.com/freeconf/yang v0.0.0-20240126135339-ef92ddeb9f99 h1:CzgpQ/Y6Lqpsx8oDLGSrSp4f4WggqBLkUq4IOrGrLPk=
+github.com/freeconf/yang v0.0.0-20240126135339-ef92ddeb9f99/go.mod h1:mWEJ47bQKL2+1uMaHsA6VjRtoO+svJ2LcIiN+StJqNY=
 golang.org/x/crypto v0.16.0 h1:mMMrFzRSCF0GvB7Ne27XVtVAaXLrPmgPC7/v0tkwHaY=
 golang.org/x/crypto v0.16.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
 golang.org/x/sys v0.15.0 h1:h48lPFYpsTvQJZF4EKyI4aLHaev3CxivZmv7yZig9pc=
