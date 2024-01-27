@@ -61,8 +61,8 @@ type RpcMsg struct {
 }
 
 type CreateSubscription struct {
-	StartTime time.Time  `xml:"startTime,omitempty"`
-	StopTime  time.Time  `xml:"stopTime,omitempty"`
+	StartTime *time.Time `xml:"startTime,omitempty"`
+	StopTime  *time.Time `xml:"stopTime,omitempty"`
 	Filter    *RpcFilter `xml:"filter,omitempty"`
 	Stream    string     `xml:"stream,omitempty"`
 }
@@ -109,8 +109,9 @@ type RpcFilter struct {
 }
 
 type Notification struct {
-	EventTime time.Time        `xml:"eventTime"`
-	Event     nodeutil.XmlNode `xml:"event"`
+	XMLName   xml.Name            `xml:"urn:ietf:params:xml:ns:netconf:notification:1.0 notification"`
+	EventTime time.Time           `xml:"eventTime"`
+	Elems     []*nodeutil.XMLWtr2 `xml:",any"`
 }
 
 func addNamespaces(ns map[string]*meta.Module, m *meta.Module) {

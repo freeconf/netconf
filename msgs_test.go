@@ -5,8 +5,10 @@ import (
 	"flag"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/freeconf/yang/fc"
+	"github.com/freeconf/yang/nodeutil"
 	"github.com/freeconf/yang/patch/xml"
 )
 
@@ -24,7 +26,6 @@ func TestMsg(t *testing.T) {
 	var buf bytes.Buffer
 	fc.AssertEqual(t, nil, WriteResponseWithOptions(msg, &buf, false, false))
 	fc.AssertEqual(t, `<x xmlns="Y"><y></y></x>`, buf.String())
-
 }
 
 func TestGetConfig(t *testing.T) {
@@ -108,4 +109,43 @@ func TestHello(t *testing.T) {
 	var buf bytes.Buffer
 	fc.AssertEqual(t, nil, WriteResponseWithOptions(msg.Hello, &buf, false, true))
 	fc.Gold(t, *updateFlag, buf.Bytes(), "testdata/gold/hello.xml")
+}
+
+func TestCreateSupscription(t *testing.T) {
+	payload := `
+	<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+		<create-subscription xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">
+			<stream>car:update</stream>
+		</create-subscription>
+	</rpc>`
+
+	// read/decode
+	msg, err := DecodeRequest(strings.NewReader(payload))
+	fc.RequireEqual(t, nil, err)
+	fc.RequireEqual(t, true, msg.Rpc != nil)
+	fc.RequireEqual(t, true, msg.Rpc.CreateSubscription != nil)
+	fc.AssertEqual(t, "car:update", msg.Rpc.CreateSubscription.Stream)
+
+	// write/encode
+	var buf bytes.Buffer
+	fc.AssertEqual(t, nil, WriteResponseWithOptions(msg.Rpc, &buf, false, true))
+	fc.Gold(t, *updateFlag, buf.Bytes(), "testdata/gold/create-subscription.xml")
+}
+
+func TestNotification(t *testing.T) {
+	// any fixed date will do
+	t0, _ := time.Parse("2006-01-02T15:04:05Z", "2014-01-01T12:00:00Z")
+	resp := Notification{
+		EventTime: t0,
+		Elems: []*nodeutil.XMLWtr2{
+			{
+				XMLName: xml.Name{Space: "x", Local: "y"},
+				Content: "hello",
+			},
+		},
+	}
+	var actual bytes.Buffer
+	err := WriteResponse(resp, &actual)
+	fc.AssertEqual(t, nil, err)
+	fc.Gold(t, *updateFlag, actual.Bytes(), "testdata/gold/notification.xml")
 }

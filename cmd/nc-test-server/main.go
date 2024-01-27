@@ -31,11 +31,15 @@ func main() {
 	d := device.New(ypath)
 	d.Add("car", api)
 	streams := estream.NewService()
+
+	// in NETCONF, you pre-register streams you want to support.
 	streams.AddStream(estream.Stream{
 		Name: "car:update",
 		Open: func() (*node.Selection, error) {
 			b, err := d.Browser("car")
-			chkerr(err)
+			if err != nil {
+				return nil, err
+			}
 			return b.Root().Find("update")
 		},
 	})

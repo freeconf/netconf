@@ -124,6 +124,7 @@ func (s *SshHandler) handleConn(conn *ssh.ServerConn, c ssh.NewChannel) {
 
 		defer fc.Debug.Printf("ssh: exiting ses=%d", sess.Id)
 		defer ch.Close()
+		defer sess.close()
 		for {
 			select {
 			case <-ctx.Done():

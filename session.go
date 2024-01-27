@@ -1,6 +1,7 @@
 package netconf
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ type Session struct {
 	in    <-chan io.Reader
 	Id    int64
 	user  string
+	subs  []func()
 }
 
 // ErrEOS signals the session should be closed gracefully.
@@ -43,6 +45,12 @@ func NewSession(mgr SessionManager, user string, dev device.Device, in io.Reader
 
 func (ses *Session) User() string {
 	return ses.user
+}
+
+func (ses *Session) close() {
+	for _, sub := range ses.subs {
+		sub()
+	}
 }
 
 func (ses *Session) readMessages(ctx context.Context) error {
@@ -316,18 +324,28 @@ func (ses *Session) handleCreateSubscription(create *CreateSubscription) error {
 	}
 	name := fmt.Sprintf("sub-%s", sub.Id)
 	err = sub.AddReceiver(name, func(e estream.ReceiverEvent) error {
-		resp := Notification{
-			EventTime: e.EventTime,
-		}
-		if err := e.Event.UpsertInto(&resp.Event); err != nil {
+		var buf bytes.Buffer
+
+		var payload nodeutil.XMLWtr2
+		if err := e.Event.UpsertInto(&payload); err != nil {
 			return fmt.Errorf("error encoding event %w", err)
 		}
+		resp := Notification{
+			EventTime: e.EventTime,
+			Elems:     payload.Elem,
+		}
+		WriteResponse(resp, &buf)
+		fmt.Println(buf.String())
 		out := NewChunkedWtr(ses.out)
 		defer out.Close()
 		if err = WriteResponse(resp, out); err != nil {
 			return fmt.Errorf("error encoding notification %w", err)
 		}
 		return nil
+	})
+	ses.subs = append(ses.subs, func() {
+		fc.Debug.Printf("closing subscription %s", name)
+		sub.RemoveReceiver(name)
 	})
 	return err
 }
